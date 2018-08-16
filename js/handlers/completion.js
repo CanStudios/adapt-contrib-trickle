@@ -1,133 +1,131 @@
 define([
-    'core/js/adapt'
+  'core/js/adapt'
 ], function(Adapt) {
 
-    var completionAttribute = "_isComplete";
+  var completionAttribute = "_isComplete";
 
-    var TrickleCompletionHandler = _.extend({
+  var TrickleCompletionHandler = _.extend({
 
-        isStepLocking: false,
-        isCompleted: false,
-        
-        stepModel: null,
-        
-        initialize: function() {
-            this.listenToOnce(Adapt, "app:dataReady", this.onAppDataReady);
-        },
+    isStepLocking: false,
+    isCompleted: false,
 
-        onAppDataReady: function() {
-            this.getCompletionAttribute();
-            this.setupEventListeners();
-        },
+    stepModel: null,
 
-        getCompletionAttribute: function() {
-            var trickle = Adapt.trickle.getModelConfig(Adapt.config);
-            if (!trickle) return;
-            if (trickle._completionAttribute) {
-                completionAttribute = trickle._completionAttribute;
-            }
-        },
+    initialize: function() {
+      this.listenToOnce(Adapt, "app:dataReady", this.onAppDataReady);
+    },
 
-        setupEventListeners: function() {
-            this.listenTo(Adapt, {
-                "trickle:descendants": this.onDescendants,
-                "trickle:steplock": this.onStepLock,
-                "trickle:stepunlock": this.onStepUnlock,
-                "trickle:kill": this.onKill,
-                "remove": this.onRemove
-            });
-        },
+    onAppDataReady: function() {
+      this.getCompletionAttribute();
+      this.setupEventListeners();
+    },
 
-        onDescendants: function(view) {
-            //save the original completion state of the component before steplocking
-            _.each(view.descendantsParentFirst, _.bind(function(descendant) {
-                var trickle = Adapt.trickle.getModelConfig(descendant);
-                if (!trickle) return;
-                trickle._wasCompletedPreRender = descendant.get(completionAttribute);
-            }, this));
-        },
+    getCompletionAttribute: function() {
+      var trickle = Adapt.trickle.getModelConfig(Adapt.config);
+      if (!trickle) return;
+      if (trickle._completionAttribute) {
+        completionAttribute = trickle._completionAttribute;
+      }
+    },
 
-        onStepLock: function(view) {
-            var isModelComplete = view.model.get(completionAttribute);
+    setupEventListeners: function() {
+      this.listenTo(Adapt, {
+        "trickle:descendants": this.onDescendants,
+        "trickle:steplock": this.onStepLock,
+        "trickle:stepunlock": this.onStepUnlock,
+        "trickle:kill": this.onKill,
+        "remove": this.onRemove
+      });
+    },
 
-            var trickle = Adapt.trickle.getModelConfig(view.model);
-            if (!trickle._stepLocking._isCompletionRequired
-                && !trickle._stepLocking._isLockedOnRevisit) {
-                if (isModelComplete) {
-                    //skip any components that do not require completion but that are already complete
-                    //this is needed for a second visit to a page with 'inview' components that aren't reset and don't require completion and are not relocked on revisit
-                    Adapt.trigger("trickle:continue", view);
-                }
-                return;
-            }
+    onDescendants: function(view) {
+      //save the original completion state of the component before steplocking
+      _.each(view.descendantsParentFirst, _.bind(function(descendant) {
+        var trickle = Adapt.trickle.getModelConfig(descendant);
+        if (!trickle) return;
+        trickle._wasCompletedPreRender = descendant.get(completionAttribute);
+      }, this));
+    },
 
-            if (trickle._stepLocking._isCompletionRequired
-                && isModelComplete
-                && trickle._wasCompletedPreRender) {
-                //skip any components that are complete, have require completion and we completed before the page rendered
-                Adapt.trigger("trickle:continue", view);
-                return;
-            }
+    onStepLock: function(view) {
+      var isModelComplete = view.model.get(completionAttribute);
 
-            Adapt.trigger("trickle:wait");
+      var trickle = Adapt.trickle.getModelConfig(view.model);
+      if (!trickle._stepLocking._isCompletionRequired
+        && !trickle._stepLocking._isLockedOnRevisit) {
+        if (isModelComplete) {
+          //skip any components that do not require completion but that are already complete
+          //this is needed for a second visit to a page with 'inview' components that aren't reset and don't require completion and are not relocked on revisit
+          Adapt.trigger("trickle:continue", view);
+        }
+        return;
+      }
 
-            if (isModelComplete) {
-                _.defer(function() {
-                    Adapt.trigger("trickle:unwait");
-                });
-                return;
-            }
+      if (trickle._stepLocking._isCompletionRequired
+        && isModelComplete
+        && trickle._wasCompletedPreRender) {
+        //skip any components that are complete, have require completion and we completed before the page rendered
+        Adapt.trigger("trickle:continue", view);
+        return;
+      }
 
-            view.model.set("_isTrickleAutoScrollComplete", false);
-            this.isCompleted = false;
-            this.isStepLocking = true;
-            this.stepModel = view.model;
+      Adapt.trigger("trickle:wait");
 
-            this.listenTo(this.stepModel, "change:"+completionAttribute, this.onCompletion);
-        },
+      if (isModelComplete) {
+        _.defer(function() {
+          Adapt.trigger("trickle:unwait");
+        });
+        return;
+      }
 
-        onCompletion: function(model, value) {
-            if (value === false) return;
+      view.model.set("_isTrickleAutoScrollComplete", false);
+      this.isCompleted = false;
+      this.isStepLocking = true;
+      this.stepModel = view.model;
 
-            _.defer(_.bind(function() {
-                this.stepCompleted();
-            }, this));
+      this.listenTo(this.stepModel, "change:"+completionAttribute, this.onCompletion);
+    },
 
-        },
+    onCompletion: function(model, value) {
+      if (value === false) return;
 
-        stepCompleted: function() {
+      _.defer(_.bind(function() {
+        this.stepCompleted();
+      }, this));
+    },
 
-            if (!this.isStepLocking) return;
+    stepCompleted: function() {
+      if (!this.isStepLocking) return;
 
-            if (this.isCompleted) return;
-            this.isCompleted = true;
+      if (this.isCompleted) return;
+      this.isCompleted = true;
 
-            this.stopListening(this.stepModel, "change:"+completionAttribute, this.onCompletion);
-            
-            _.defer(function(){
-                Adapt.trigger("trickle:unwait");
-            });
-        },
+      this.stopListening(this.stepModel, "change:"+completionAttribute, this.onCompletion);
 
-        onKill: function() {
-            this.onStepUnlock();
-        },
+      _.defer(function(){
+        Adapt.trigger("trickle:unwait");
+      });
+    },
 
-        onRemove: function() {
-            this.onStepUnlock();
-        },
+    onKill: function() {
+      this.onStepUnlock();
+    },
 
-        onStepUnlock: function() {
-            this.stopListening(this.stepModel, "change:"+completionAttribute, this.onCompletion);
-            this.isStepLocking = false;
-            this.stepModel = null;
-            this.isCompleted = false;
-        }        
+    onRemove: function() {
+      this.onStepUnlock();
+    },
 
-    }, Backbone.Events);
+    onStepUnlock: function() {
+      this.stopListening(this.stepModel, "change:"+completionAttribute, this.onCompletion);
+      this.isStepLocking = false;
+      this.stepModel = null;
+      this.isCompleted = false;
+    }
 
-    TrickleCompletionHandler.initialize();
+  }, Backbone.Events);
 
-    return TrickleCompletionHandler;
+  TrickleCompletionHandler.initialize();
+
+  return TrickleCompletionHandler;
 
 });
