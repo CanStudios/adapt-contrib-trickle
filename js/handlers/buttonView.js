@@ -59,7 +59,7 @@ define([
     },
 
     events: {
-      "click button": "onButtonClick"
+      "click .js-trickle-btn": "onButtonClick"
     },
 
     initialize: function(options) {
@@ -137,11 +137,11 @@ define([
     setButtonVisible: function(bool) {
       var trickle = Adapt.trickle.getModelConfig(this.model);
       if (!bool) {
-        this.$(".component-inner").addClass("display-none");
+        this.$(".js-trickle-btn-container").addClass("u-display-none");
         trickle._button._isVisible = false;
         //console.log("trickle hiding button", this.model.get("_id"));
       } else {
-        this.$(".component-inner").removeClass("display-none");
+        this.$(".js-trickle-btn-container").removeClass("u-display-none");
         trickle._button._isVisible = true;
         //console.log("trickle showing button", this.model.get("_id"));
       }
@@ -158,12 +158,12 @@ define([
     setButtonEnabled: function(bool) {
       var trickle = Adapt.trickle.getModelConfig(this.model);
       if (bool) {
-        this.$("button").removeClass("disabled").removeAttr("disabled");
+        this.$(".js-trickle-btn").removeClass("is-disabled").removeAttr("disabled");
         trickle._button._isDisabled = true;
         // make label unfocusable as it is no longer needed
         this.$('.aria-label').a11y_cntrl(false);
       } else {
-        this.$("button").addClass("disabled").attr("disabled", "disabled");
+        this.$(".js-trickle-btn").addClass("is-disabled").attr("disabled", "disabled");
         trickle._button._isDisabled = false;
       }
     },

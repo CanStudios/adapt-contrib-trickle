@@ -54,9 +54,7 @@ define([
       var offset = this.stepView.$el.offset();
       var height = this.stepView.$el.height();
 
-      var topPadding = parseInt($("#wrapper").css("padding-top") || "0");
-
-      var bottom = (offset['top'] - topPadding) + height;
+      var bottom = offset['top'] + height;
 
       $("#wrapper").css("height", bottom );
     },
